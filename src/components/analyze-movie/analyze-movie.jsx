@@ -1,13 +1,15 @@
 import React, {useState} from 'react'
 import {Input, Alert, Result} from "antd"
+import _ from 'lodash'
 import { SmileOutlined } from '@ant-design/icons'
 import axios from 'axios'
 
 import {API_KEY, SEARCH_FILM_URL, TONE_NOT_IBM_API_KEY} from "../../constants";
-import {Loader, MovieCard} from "../index";
+import {MovieCard} from "../index";
 
 import './style.css'
 import {ToneBarChart} from "../tone-bar-chart/tone-bar-chart";
+import {SkeletonComponent} from "../skeleton/skeleton";
 
 const AnalyzeMovie = (props) => {
     const {Search} = Input
@@ -19,7 +21,6 @@ const AnalyzeMovie = (props) => {
     const [ibmAnalyzerData, setIbmAnalyzerData] = useState(null)
     const [analyzerData, setAnalyzerData] = useState(null)
 
-    console.log(movieData)
     const handleOnSearch = async (query) => {
         try {
             setError(false)
@@ -65,16 +66,17 @@ const AnalyzeMovie = (props) => {
                         'apikey': TONE_NOT_IBM_API_KEY
                     }
                 })
-                console.log('anotherApiResp', anotherApiResp.data)
-                setAnalyzerData(anotherApiResp.data)
-                const tonesDataForBarChart = tones.reduce((acc, tone) => {
+                const tonesApiDataForBarChart = {}
+                _.forIn(anotherApiResp.data, (value, key) => tonesApiDataForBarChart[key] = value * 100)
+                setAnalyzerData(tonesApiDataForBarChart)
+                const tonesIBMDataForBarChart = tones.reduce((acc, tone) => {
                     return {
                         ...acc,
                         [tone.tone_name]: tone.score * 100
                     }
                 }, [])
 
-                setIbmAnalyzerData(tonesDataForBarChart)
+                setIbmAnalyzerData(tonesIBMDataForBarChart)
                 setLoading(false)
             } else {
                 setLoading(true)
@@ -86,6 +88,18 @@ const AnalyzeMovie = (props) => {
             setLoading(false)
             setError(true)
         }
+    }
+
+    const renderBarChart = (data, title) => {
+        return (
+        data && !isLoading && !isError &&
+            <div className='bar-chart-container'>
+                <h3 className='bar-charts-header'>{title}</h3>
+                <ToneBarChart
+                    data={data}
+                />
+            </div>
+        )
     }
 
     return (
@@ -115,35 +129,17 @@ const AnalyzeMovie = (props) => {
             />
             }
             {isLoading &&
-                <>
-                    <Result
-                        title="Your operation has been executed. Relax and wait."
-                    />
-                    <Loader/>
-                </>
+                <SkeletonComponent/>
             }
             {movieData && !isLoading && !isError &&
                 <MovieCard
+                    isLoading={isLoading}
                     movieData={movieData}
                 />
             }
             <div className='analyze-bar-chart'>
-                {ibmAnalyzerData && !isLoading && !isError &&
-                    <div>
-                        <h3 className='bar-charts-header'>IBM Tone Analyzer Neuronal web results</h3>
-                        <ToneBarChart
-                            data={ibmAnalyzerData}
-                        />
-                    </div>
-                }
-                {analyzerData && !isLoading && !isError &&
-                    <div>
-                        <h3 className='bar-charts-header'>Another free Tone Analyzer Neuronal web results</h3>
-                        <ToneBarChart
-                            data={analyzerData}
-                        />
-                    </div>
-                }
+                {renderBarChart(ibmAnalyzerData, 'IBM Neuronal Tone Analyzer')}
+                {renderBarChart(analyzerData, '"Text to Emotion" Neuronal Tone Analyzer')}
             </div>
         </div>
     )

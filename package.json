@@ -16,6 +16,7 @@
     "opensubtitles-api": "^5.1.2",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
+    "react-loading-skeleton": "^2.1.1",
     "react-scripts": "3.4.3",
     "recharts": "^1.8.5",
     "subtitle": "^4.0.1"

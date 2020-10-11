@@ -23,7 +23,7 @@ const workWithSrtFile = (searchingFilm) => {
         })
         .then((subtitles) => {
             const { url } = subtitles.en
-            const writeStream = fs.createWriteStream('./local-server/output-files/subtitles.json')
+            const writeStream = fs.createWriteStream('./local-server/output-files/subtitles.vtt')
 
             return new Promise((resolve, reject) => {
                 http.get(url, (response) => {

@@ -1,0 +1,9 @@
+
+.skeleton-container {
+    display: flex;
+    width: 100%;
+}
+.skeleton-movie-data {
+    width: 100%;
+    margin-left: calc(var(--offset-lg) * 3);
+}
