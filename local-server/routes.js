@@ -2,13 +2,11 @@ const express = require('express')
 const bodyParser = require('body-parser');
 const utils = require('./utils')
 const ToneAnalyzerV3 = require('ibm-watson/tone-analyzer/v3');
+const { TextAnalyticsClient, AzureKeyCredential } = require("@azure/ai-text-analytics");
 const { IamAuthenticator } = require('ibm-watson/auth');
 
 const router = express.Router()
 router.use(bodyParser.json())
-
-const IBM_API_KEY = 'aGDW9G4F4fIb9w0pfdNDSk_D6mjroKIiKyNh1S6kNG08'
-const IBM_API_URL = 'https://api.eu-gb.tone-analyzer.watson.cloud.ibm.com/instances/a706a08a-6c5f-4d02-918b-0f4c8d0b1dba'
 
 const handleSubtitleFile = async (req, res, next) =>  {
     res.statusCode = 200;
@@ -20,13 +18,12 @@ const handleSubtitleFile = async (req, res, next) =>  {
 
 const handleIbmApi = async (req, res, next) => {
     const {subtitlesText} = req.body
-
     const toneAnalyzer = new ToneAnalyzerV3({
         version: '2017-09-21',
         authenticator: new IamAuthenticator({
-            apikey: IBM_API_KEY,
+            apikey: process.env.REACT_APP_IBM_API_KEY,
         }),
-        serviceUrl: IBM_API_URL,
+        serviceUrl: process.env.REACT_APP_IBM_API_URL,
         disableSslVerification: false
     });
 
@@ -40,10 +37,29 @@ const handleIbmApi = async (req, res, next) => {
             res.end(JSON.stringify(toneAnalysis))
         })
         .catch(err => {
-            console.log('error:', err);
+            console.log('error:', err)
+            res.status = 500
+            res.end(err)
         });
+}
+
+const handleMicrosoftApi = async (req, res, next) => {
+    const { subtitlesText } = req.body
+
+    const textAnalyticsClient = new TextAnalyticsClient(process.env.REACT_APP_MICROSOFT_API_ENDPOINT, new AzureKeyCredential(process.env.REACT_APP_MICROSOFT_API_KEY));
+    try {
+        const sentimentResult = await textAnalyticsClient.analyzeSentiment([subtitlesText]);
+        res.setHeader('Content-Type', 'application/json')
+        console.log('sentimentResult.confidenceScores', sentimentResult[0].confidenceScores)
+        res.end(JSON.stringify(sentimentResult[0].confidenceScores))
+    } catch (e) {
+        res.status = 500
+        res.end(e)
+    }
+
 }
 
 module.exports = router
     .post('/get-subtitle-file', handleSubtitleFile)
     .post('/ibm-library', handleIbmApi)
+    .post('/microsoft-api', handleMicrosoftApi)

@@ -37,7 +37,7 @@ const AnalyzeMovie = (props) => {
                 title,
                 fullTitle,
                 year,
-                plot: plot.slice(0, 300) + '...',
+                plot: plot,
                 directors,
                 writers,
                 stars: stars.split(',').slice(0, 3).join(',') + '...',
@@ -61,14 +61,11 @@ const AnalyzeMovie = (props) => {
                 const ibmResp = await axios.post('/api/ibm-library', {subtitlesText: clearSubtitles})
                 const { result: { document_tone: { tones } } } = ibmResp?.data
 
-                const anotherApiResp = await axios.post('https://api.promptapi.com/text_to_emotion', clearSubtitles.substring(0, 500), {
-                    headers: {
-                        'apikey': TONE_NOT_IBM_API_KEY
-                    }
-                })
+                const microsoftApiResp = await axios.post('/api/microsoft-api', { subtitlesText: clearSubtitles.substring(0, 5100) })
                 const tonesApiDataForBarChart = {}
-                _.forIn(anotherApiResp.data, (value, key) => tonesApiDataForBarChart[key] = value * 100)
+                _.forIn(microsoftApiResp.data, (value, key) => tonesApiDataForBarChart[key] = value * 100)
                 setAnalyzerData(tonesApiDataForBarChart)
+
                 const tonesIBMDataForBarChart = tones.reduce((acc, tone) => {
                     return {
                         ...acc,
@@ -120,13 +117,13 @@ const AnalyzeMovie = (props) => {
 
             }
             {isError &&
-            <Alert
-                className='analyze-movie-alert'
-                message="Failed while loading subtitles"
-                description="Problem with subtitles, try another movie name"
-                type="error"
-                showIcon
-            />
+                <Alert
+                    className='analyze-movie-alert'
+                    message="Failed while loading subtitles"
+                    description="Problem with subtitles, try another movie name"
+                    type="error"
+                    showIcon
+                />
             }
             {isLoading &&
                 <SkeletonComponent/>

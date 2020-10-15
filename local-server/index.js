@@ -9,6 +9,10 @@ const router = express.Router()
 const hostname = 'localhost'
 const port = 4242
 
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config();
+}
+
 router.use(bodyParser.json())
 router.use('/api', mainRouter)
 
