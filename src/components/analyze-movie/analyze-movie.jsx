@@ -4,12 +4,17 @@ import _ from 'lodash'
 import { SmileOutlined } from '@ant-design/icons'
 import axios from 'axios'
 
-import {API_KEY, SEARCH_FILM_URL, TONE_NOT_IBM_API_KEY} from "../../constants";
+import {API_KEY, SEARCH_FILM_URL} from "../../constants";
 import {MovieCard} from "../index";
 
 import './style.css'
 import {ToneBarChart} from "../tone-bar-chart/tone-bar-chart";
 import {SkeletonComponent} from "../skeleton/skeleton";
+
+
+const sendApiRequest = (url, data) => {
+    return axios.post(url, data)
+}
 
 const AnalyzeMovie = (props) => {
     const {Search} = Input
@@ -58,25 +63,32 @@ const AnalyzeMovie = (props) => {
                 let clearSubtitles = subtitlesText.replaceAll('"', '')
                 clearSubtitles = clearSubtitles.replace(/[\r\n]+/g, '')
 
-                const ibmResp = await axios.post('/api/ibm-library', {subtitlesText: clearSubtitles})
-                const { result: { document_tone: { tones } } } = ibmResp?.data
+                Promise.all([sendApiRequest('/api/ibm-library', {subtitlesText: clearSubtitles}), sendApiRequest('/api/microsoft-api', { subtitlesText: clearSubtitles.substring(0, 5100)})])
+                    .then((responses) => {
+                        const [ibmResp, microsoftResp] = responses
+                        const { result: { document_tone: { tones: ibmData } } } = ibmResp?.data
+                        const { data: microsoftData } = microsoftResp
 
-                const microsoftApiResp = await axios.post('/api/microsoft-api', { subtitlesText: clearSubtitles.substring(0, 5100) })
-                const tonesApiDataForBarChart = {}
-                _.forIn(microsoftApiResp.data, (value, key) => tonesApiDataForBarChart[key] = value * 100)
-                setAnalyzerData(tonesApiDataForBarChart)
+                        const tonesApiDataForBarChart = {}
+                        _.forIn(microsoftData, (value, key) => tonesApiDataForBarChart[key] = value * 100)
+                        setAnalyzerData(tonesApiDataForBarChart)
+                        const tonesIBMDataForBarChart = ibmData.reduce((acc, tone) => {
+                            return {
+                                ...acc,
+                                [tone.tone_name]: tone.score * 100
+                            }
+                        }, [])
 
-                const tonesIBMDataForBarChart = tones.reduce((acc, tone) => {
-                    return {
-                        ...acc,
-                        [tone.tone_name]: tone.score * 100
-                    }
-                }, [])
-
-                setIbmAnalyzerData(tonesIBMDataForBarChart)
-                setLoading(false)
+                        setIbmAnalyzerData(tonesIBMDataForBarChart)
+                        setLoading(false)
+                    })
+                    .catch((error) => {
+                        console.log('ERROR', error)
+                        setLoading(false)
+                        setError(true)
+                    })
             } else {
-                setLoading(true)
+                setLoading(false)
                 setError(true)
             }
 
@@ -136,7 +148,7 @@ const AnalyzeMovie = (props) => {
             }
             <div className='analyze-bar-chart'>
                 {renderBarChart(ibmAnalyzerData, 'IBM Neuronal Tone Analyzer')}
-                {renderBarChart(analyzerData, '"Text to Emotion" Neuronal Tone Analyzer')}
+                {renderBarChart(analyzerData, 'Microsoft Neuronal Tone Analyzer')}
             </div>
         </div>
     )
